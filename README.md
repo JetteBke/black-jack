@@ -1,10 +1,10 @@
 # black-jack
 
-A Clojure library designed to ... well, that part is up to you.
+Basic implementation of Black Jack - WIP
 
 ## Usage
 
-FIXME
+run lein run from terminal or (play) in REPL
 
 ## License
 
