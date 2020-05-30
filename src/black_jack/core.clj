@@ -8,6 +8,9 @@
 (defn user-wins []
   (prn "CONGRATULATIONS, YOU WON!"))
 
+(defn user-loses []
+  (prn "OH NO, YOU LOST!"))
+
 (defn create-deck []
   (->> (range 2 11)
        (concat ["A" "J" "Q" "K"])
@@ -31,9 +34,14 @@
     (reduce + values)))
 
 (defn show-cards-and-result [user-cards result]
-  (prn (str "Your cards are: " (list user-cards)))
+  (prn "Your cards are:")
+  (loop [i 0]
+    (when (< i (count user-cards))
+      (prn (nth user-cards i))
+      (recur (inc i))))
   (prn (str "Score: " result)))
 
+; TODO: user cards should definitely be subtracted from the deck
 (defn give-card [deck user-cards]
   (rand-nth deck))
 
@@ -44,13 +52,28 @@
 (defn show-new-card [new-card]
   (prn (str "Your new card is: " new-card)))
 
-(defn play-second-round [user-cards result-of-round-one deck]
+(defn play-third-round [user-cards deck]
+  (if (= "1" (ask-for-action))
+    (let [new-card (give-card deck user-cards)
+          user-cards-after-round-three (conj user-cards new-card)
+          result-of-round-three (calculate-result user-cards-after-round-three)]
+      (show-new-card new-card)
+      (show-cards-and-result user-cards-after-round-three result-of-round-three)
+      (if (= result-of-round-three BLACK-JACK)
+        (user-wins)
+        (user-loses)))))
+
+(defn play-second-round [user-cards deck]
   (if (= "1" (ask-for-action))
     (let [new-card (give-card deck user-cards)
           user-cards-after-round-two (conj user-cards new-card)
-          result-after-round-two (calculate-result user-cards-after-round-two)]
+          result-of-round-two (calculate-result user-cards-after-round-two)]
       (show-new-card new-card)
-      (show-cards-and-result user-cards-after-round-two result-after-round-two))))
+      (show-cards-and-result user-cards-after-round-two result-of-round-two)
+      (if (= BLACK-JACK result-of-round-two) (user-wins))
+      (if (< BLACK-JACK result-of-round-two) (user-loses))
+      (if (> BLACK-JACK result-of-round-two) (play-third-round user-cards-after-round-two deck)))
+    (user-loses)))
 
 (defn play []
   (let [deck (create-deck)
@@ -59,12 +82,11 @@
     (show-cards-and-result user-cards result-of-round-one)
     (if (= result-of-round-one BLACK-JACK)
       (user-wins)
-      (play-second-round user-cards result-of-round-one deck))))
+      (play-second-round user-cards deck))))
 
 (defn interface []
   (prn "Welcome to Black Jack!")
   (prn "If you want to start the game, type 'go'")
   (if (start-game?) (play))
-  ;(prn "Wanna play again? - type 'go'")
-  ;(if (start-game?) (play))
-  )
+  (prn "Wanna play again? - type 'go'")
+  (if (start-game?) (play)))
