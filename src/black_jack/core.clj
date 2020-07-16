@@ -29,64 +29,86 @@
     "J" 10
     card))
 
+; pure function
 (defn calculate-result [cards]
   (let [values (map #(calculate-value-of-card %) cards)]
     (reduce + values)))
 
-(defn show-cards-and-result [user-cards result]
+; pure function
+(defn create-result-object [user-cards new-card]
+  (let [all-cards (conj user-cards new-card)
+        result (calculate-result all-cards)]
+    {:result      result
+     :cards       all-cards
+     :end-of-game (if (>= result BLACK-JACK) true false)}))
+
+(defn show-cards-and-result [result-object]
   (prn "Your cards are:")
   (loop [i 0]
-    (when (< i (count user-cards))
-      (prn (nth user-cards i))
+    (when (< i (count (:cards result-object)))
+      (prn (nth (:cards result-object) i))
       (recur (inc i))))
-  (prn (str "Score: " result)))
+  (prn (str "Score: " (:result result-object))))
 
-; TODO: user cards should definitely be subtracted from the deck
-(defn give-card [deck user-cards]
+; TODO: user cards should be subtracted from the deck
+(defn give-card [user-cards deck]
   (rand-nth deck))
 
 (defn ask-for-action []
-  (prn "What do you want to do next? 1. Get another card!, 2. End!")
+  (prn "What do you want to do next? 1. Get another card! (Other values will end the game)")
   (read-line))
 
 (defn show-new-card [new-card]
   (prn (str "Your new card is: " new-card)))
 
-(defn play-third-round [user-cards deck]
-  (if (= "1" (ask-for-action))
-    (let [new-card (give-card deck user-cards)
-          user-cards-after-round-three (conj user-cards new-card)
-          result-of-round-three (calculate-result user-cards-after-round-three)]
-      (show-new-card new-card)
-      (show-cards-and-result user-cards-after-round-three result-of-round-three)
-      (if (= result-of-round-three BLACK-JACK)
-        (user-wins)
-        (user-loses)))))
-
-(defn play-second-round [user-cards deck]
-  (if (= "1" (ask-for-action))
-    (let [new-card (give-card deck user-cards)
-          user-cards-after-round-two (conj user-cards new-card)
-          result-of-round-two (calculate-result user-cards-after-round-two)]
-      (show-new-card new-card)
-      (show-cards-and-result user-cards-after-round-two result-of-round-two)
-      (if (= BLACK-JACK result-of-round-two) (user-wins))
-      (if (< BLACK-JACK result-of-round-two) (user-loses))
-      (if (> BLACK-JACK result-of-round-two) (play-third-round user-cards-after-round-two deck)))
+(defn end-game-with [result]
+  (if (= BLACK-JACK result)
+    (user-wins)
     (user-loses)))
+
+(defn translate-result-for-user [result-object]
+  (show-cards-and-result result-object)
+  result-object)
+
+(defn execute-round [user-cards]
+  (->> (create-deck)
+       (give-card user-cards)
+       (create-result-object user-cards)
+       (translate-result-for-user)))
+
+(defn play-round [result-object]
+  (let [action (ask-for-action)]
+    (if (= action "1")
+      (execute-round (:cards result-object))
+      (end-game-with (:result result-object)))))
+
+;(defn play []
+;  (let [deck (create-deck)
+;        user-card (give-card [] deck)
+;        result-of-round-one (execute-round [user-card])]
+;    (if (:end-of-game result-of-round-one)
+;      (end-game-with (:result result-of-round-one))
+;      (let [result-object (play-round result-of-round-one)]
+;        (loop [result (:result result-of-round-one)]
+;          (when (or (> result 0) (< result 21))
+;            (prn "result " result)
+;            (prn "You can continue!"))
+;          (recur (+ (- result (:result result-object)) result)))))))
 
 (defn play []
   (let [deck (create-deck)
-        user-cards (give-cards deck)
-        result-of-round-one (calculate-result user-cards)]
-    (show-cards-and-result user-cards result-of-round-one)
-    (if (= result-of-round-one BLACK-JACK)
-      (user-wins)
-      (play-second-round user-cards deck))))
+        user-card (give-card [] deck)
+        result-of-round-one (execute-round [user-card])
+        result-of-round-two (if (:end-of-game result-of-round-one)
+                              (end-game-with (:result result-of-round-one))
+                              (play-round result-of-round-one))]
+    (if (:end-of-game result-of-round-two)
+      (end-game-with (:result result-of-round-two))
+      (play-round result-of-round-two))))
 
 (defn interface []
   (prn "Welcome to Black Jack!")
   (prn "If you want to start the game, type 'go'")
-  (if (start-game?) (play))
+  (if (start-game?) (play) (prn "Bye, see you next time!"))
   (prn "Wanna play again? - type 'go'")
-  (if (start-game?) (play)))
+  (if (start-game?) (play) (prn "Bye, see you next time!")))
