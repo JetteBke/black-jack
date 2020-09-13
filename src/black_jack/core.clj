@@ -1,9 +1,24 @@
 (ns black-jack.core)
 
+;#_(comment
+;  we need
+;  - a deck of cards
+;  - a user
+;  - a game
+;  actions
+;  - start a game
+;  - give cards
+;  - feedback to user
+;  - ask for action
+;  - execute the action
+;  - calculate if lost or won)
+
 (defn start-game? []
   (if (= (read-line) "go") true false))
 
 (def BLACK-JACK 21)
+
+(def COLORS ["heart" "diamond" "spade" "cross"])
 
 (defn user-wins []
   (prn "CONGRATULATIONS, YOU WON!"))
@@ -12,27 +27,28 @@
   (prn "OH NO, YOU LOST!"))
 
 (defn create-deck []
-  (->> (range 2 11)
-       (concat ["A" "J" "Q" "K"])
-       (repeat 4)
-       (reduce concat)
-       vec))
+  (let [without-special-cards (->> (range 2 11)
+                                   (map #(map (fn [param1] (hash-map (keyword (str param1 "-" %)) %)) COLORS))
+                                   (reduce concat)
+                                   vec)
+        special-cards (->> (map #(map
+                                   (fn [param1]
+                                     (hash-map
+                                       (keyword (str % "-" (reduce str (keys param1))))
+                                       (reduce str (vals param1))))
+                                   [{:K 10} {:Q 10} {:J 10} {:A 11}]) COLORS)
+                           (reduce concat))]
+    (concat without-special-cards special-cards)))
 
-(defn give-cards [deck]
-  (vec (repeatedly 2 #(rand-nth deck))))
-
-(defn calculate-value-of-card [card]
-  (case card
-    "A" 2
-    "K" 10
-    "Q" 10
-    "J" 10
-    card))
+(defn give-card [deck]
+  (rand-nth deck))
 
 ; pure function
 (defn calculate-result [cards]
-  (let [values (map #(calculate-value-of-card %) cards)]
-    (reduce + values)))
+  (->> cards
+       (map #(vals %))
+       flatten
+       (reduce +)))
 
 ; pure function
 (defn create-result-object [user-cards new-card]
@@ -51,8 +67,8 @@
   (prn (str "Score: " (:result result-object))))
 
 ; TODO: user cards should be subtracted from the deck
-(defn give-card [user-cards deck]
-  (rand-nth deck))
+;(defn give-card [user-cards deck]
+;  (rand-nth deck))
 
 (defn ask-for-action []
   (prn "What do you want to do next? 1. Get another card! (Other values will end the game)")
